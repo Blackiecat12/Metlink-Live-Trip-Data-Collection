@@ -8,11 +8,12 @@ from trip import trip_record
 def main():
     AUTH = get_api_params()
     records = {}
+    # Testing
     for i in range(5):
         entities = get_tripupdates(AUTH)
         for entity in entities:
             e_id = entity['trip_update']['trip']['trip_id']
-            if records.get(e_id) == None:
+            if records.get(e_id) is None:
                 records[e_id] = trip_record(entity)
             else:
                 records[e_id].update(entity)
@@ -24,13 +25,16 @@ def main():
 
 
 def get_tripupdates(AUTH):
-    """ Currently a test function to get live trip updates from metlink api. """
+    """ Collects and returns the list of current trip statuses from Metlink API
+    :param AUTH:
+    :return: List of trip_updates (JSON)
+    """
     link = "/gtfs-rt/tripupdates"
     response = metlink_get(link, AUTH)
+    # If we got error on the request then don't crash, just return an empty list.
     if response is None:
-        return
-
-    # Update the dictionary
+        return []
+    # Pull the trip_update list
     entities = response.json()["entity"]
     return entities
 
