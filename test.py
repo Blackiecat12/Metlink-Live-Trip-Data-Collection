@@ -1,16 +1,12 @@
-import json
-import time
-import requests
-import pandas as pd
+import argparse
 from Collector import DataCollector
 
 
-def main():
+def main(sys_args):
     AUTH = get_api_params()
     # Testing
-    # TODO make a simple UI for control/data tracking
-    collector = DataCollector(AUTH)
-    collector.run_collection(120)
+    collector = DataCollector(AUTH, sys_args.save_path, sys_args.max_storage)
+    collector.run_collection(sys_args.run_time)
 
 
 def get_api_params():
@@ -23,5 +19,16 @@ def get_api_params():
 
 
 if __name__ == "__main__":
-    # TODO: get args so can run from command line
-    main()
+    """ Command Line Parse and check. 
+        CMD params:
+        :param run_time: Time to run_program for (seconds)
+        :param save_path: Save path for trips
+        :param max_storage: Max amount of space to use in save_path
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("run_time", help="Length of time (seconds) to run the program", type=int)
+    parser.add_argument("-sp", "--save_path", help="Path to save collected trips to", type=str, default="SavedTrips")
+    parser.add_argument("-ms", "--max_storage", help="Maximum bytes of data to store in the save path", type=int,
+                        default=1e9)
+    args = parser.parse_args()
+    main(args)
