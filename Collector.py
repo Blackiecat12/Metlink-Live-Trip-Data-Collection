@@ -21,10 +21,10 @@ class DataCollector:
 
     def run_collection(self, run_time: int):
         """ Runs the collection algorithm for the specified time (in seconds). Requests will be stopped for a minimum
-        delay which _should_ be low enough to capture each stop.
+        request_delay which _should_ be low enough to capture each stop.
         :param run_time: Length of time to run collection for in seconds
         """
-        delay = 20
+        request_delay = 120
         start_time = time.perf_counter()
         end_time = start_time + run_time
         # Run loop, catch assertion errors from check_storage
@@ -51,8 +51,8 @@ class DataCollector:
                     self.records.pop(tr_id).export(self.save_path)
                     self.complete += 1
 
-                # Run the delay
-                while time.perf_counter() < loop_start + delay:
+                # Run the request_delay
+                while time.perf_counter() < loop_start + request_delay:
                     pass
 
                 print(f"CURRENTLY:" +
@@ -66,10 +66,12 @@ class DataCollector:
                 assert (self.check_storage())
                 self.records.pop(tr_id).export(self.save_path)
                 self.complete += 1
+
             # Print final message
             print(f"END:"
                   f"\tSaved {self.complete} trips from {self.request_count} requests over "
                   f"{time.perf_counter() - start_time:.1f} seconds")
+
         except AssertionError:
             print(f"END: Max Storage reached with {self.complete} trips saved from {self.request_count} requests over "
                   f"{time.perf_counter() - start_time:.1f} seconds")
