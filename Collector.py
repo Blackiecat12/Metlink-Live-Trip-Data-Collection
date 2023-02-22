@@ -175,11 +175,14 @@ class TripRecord:
         :param path_end: File path to save in
         """
         file_path = f"{os.getcwd()}\\{path_end}\\{self.id}{int(time.time())}.json"
-        json_dict = {"trip_consts": self.trip_consts, "trip_updates": self.trip_updates, "end_time": time.asctime()}
-        json_object = json.dumps(json_dict, indent=4)
+        json_object = json.dumps(self.as_json(), indent=4)
         with open(file_path, "w") as outfile:
             outfile.write(json_object)
             outfile.close()
+
+    def as_json(self):
+        """ Returns the TripRecord in json format. """
+        return {"trip_consts": self.trip_consts, "trip_updates": self.trip_updates, "end_time": time.asctime()}
 
     def debug(self):
         """ Outputs the internal variables for debugging. """
@@ -198,9 +201,10 @@ class BatchTripRecord:
     def update(self, new_trip: TripRecord):
         """ Adds a new trip record to the batch.
         Checks for already existing id, and adds time if so.
+        :param new_trip: Trip record to add
         """
-        if self.trip_json[new_trip] is None:
-            self.trip_json[new_trip.id] = new_trip
+        if self.trip_json.get(new_trip) is None:
+            self.trip_json[new_trip.id] = new_trip.as_json()
         else:
             self.trip_json[f"{new_trip.id}{int(time.time())}"] = new_trip
 
