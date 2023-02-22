@@ -29,7 +29,7 @@ class DataCollector:
         request_delay which _should_ be low enough to capture each stop.
         :param run_time: Length of time to run collection for in seconds
         """
-        request_delay = 120
+        request_delay = 20
         start_time = time.perf_counter()
         end_time = start_time + run_time
         # Run loop, catch assertion errors from check_storage
