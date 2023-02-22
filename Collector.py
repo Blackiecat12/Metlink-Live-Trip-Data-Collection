@@ -223,13 +223,10 @@ class BatchTripRecord:
 
     def update(self, new_trip: TripRecord):
         """ Adds a new trip record to the batch.
-        Checks for already existing id, and adds time if so.
+        ID is the index of the trip
         :param new_trip: Trip record to add
         """
-        if self.trip_json.get(new_trip) is None:
-            self.trip_json[new_trip.id] = new_trip.as_json()
-        else:
-            self.trip_json[f"{new_trip.id}{int(time.time())}"] = new_trip
+        self.trip_json[len(self) + 1] = new_trip.as_json()
 
     def export(self, path_end):
         """ Exports itself to a json object and saves itself as time.time() to ensure uniqueness.
