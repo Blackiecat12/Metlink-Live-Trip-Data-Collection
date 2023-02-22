@@ -210,10 +210,17 @@ class BatchTripRecord:
 
     def export(self, path_end):
         """ Exports itself to a json object and saves itself as time.time() to ensure uniqueness.
-        :param path_end: File path to save in
+        Doesn't save if empty.
+        :param path_end: Folder path to save in
         """
+        if len(self) == 0:
+            return
         file_path = f"{os.getcwd()}\\{path_end}\\BatchedRecord-{int(time.time())}.json"
         json_object = json.dumps(self.trip_json, indent=4)
         with open(file_path, "w") as outfile:
             outfile.write(json_object)
             outfile.close()
+
+    def __len__(self):
+        """ Length of the batched record is how many trips it has. """
+        return len(self.trip_json)
