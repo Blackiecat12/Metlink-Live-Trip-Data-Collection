@@ -15,6 +15,8 @@ class DataCollector:
         self.AUTH = AUTH
         self.records = {}
         self.save_path = file_path
+        self.batched_records = BatchTripRecord()
+        self.max_batch_size = 100
         self.max_storage = max_storage
         self.request_count = 0
         self.complete = 0
@@ -48,8 +50,13 @@ class DataCollector:
                 # Remove unseen trips as complete
                 for tr_id in set(self.records.keys()) - seen_ids:
                     assert (self.check_storage())
-                    self.records.pop(tr_id).export(self.save_path)
+                    self.batched_records.update(self.records.pop(tr_id))
                     self.complete += 1
+
+                # If reached batch size, export and reset
+                if len(self.batched_records) == self.max_batch_size:
+                    self.batched_records.export(self.save_path)
+                    self.batched_records = BatchTripRecord()
 
                 # Run the request_delay
                 while time.perf_counter() < loop_start + request_delay:
@@ -64,8 +71,9 @@ class DataCollector:
             # Save remaining partial trips
             for tr_id in set(self.records.keys()):
                 assert (self.check_storage())
-                self.records.pop(tr_id).export(self.save_path)
+                self.batched_records.update(self.records.pop(tr_id))
                 self.complete += 1
+            self.batched_records.export(self.save_path)
 
             # Print final message
             print(f"END:"
@@ -177,3 +185,31 @@ class TripRecord:
         """ Outputs the internal variables for debugging. """
         print(f"ID: {self.id}\nLast Updated: {self.last_updated_stop}\nConsts: {self.trip_consts}\n"
               f"Timed: {self.trip_updates}")
+
+
+class BatchTripRecord:
+    """ Storage for a number of finished trips.
+    """
+
+    def __init__(self):
+        """ Stores a list of trips. """
+        self.trip_json = dict()
+
+    def update(self, new_trip: TripRecord):
+        """ Adds a new trip record to the batch.
+        Checks for already existing id, and adds time if so.
+        """
+        if self.trip_json[new_trip] is None:
+            self.trip_json[new_trip.id] = new_trip
+        else:
+            self.trip_json[f"{new_trip.id}{int(time.time())}"] = new_trip
+
+    def export(self, path_end):
+        """ Exports itself to a json object and saves itself as time.time() to ensure uniqueness.
+        :param path_end: File path to save in
+        """
+        file_path = f"{os.getcwd()}\\{path_end}\\BatchedRecord-{int(time.time())}.json"
+        json_object = json.dumps(self.trip_json, indent=4)
+        with open(file_path, "w") as outfile:
+            outfile.write(json_object)
+            outfile.close()
