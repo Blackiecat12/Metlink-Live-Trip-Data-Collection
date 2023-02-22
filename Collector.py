@@ -146,7 +146,7 @@ class TripRecord:
         separately.
         :param json_obj: input trip_update to create the trip """
         self.id = json_obj['trip_update']['trip']['trip_id']
-        self.last_updated_stop = json_obj['trip_update']['stop_time_update']['stop_id']
+        self.last_updated_stop = int(json_obj['trip_update']['stop_time_update']['stop_sequence'])
         self.trip_consts = json_obj['trip_update']['trip'].copy()
         # This constant is stored elsewhere.
         self.trip_consts['vehicle'] = json_obj['trip_update']['vehicle']['id']
@@ -164,16 +164,34 @@ class TripRecord:
         Updates the trip_record if stop is different from last updated.
         :param json_obj:
         """
-        if json_obj['trip_update']['stop_time_update']['stop_id'] != self.last_updated_stop:
-            self.last_updated_stop = json_obj['trip_update']['stop_time_update']['stop_id']
-            self.trip_updates['arrival_time'].append(
-                json_obj['trip_update']['stop_time_update']['arrival']['time'])
-            self.trip_updates['delay'].append(
-                json_obj['trip_update']['stop_time_update']['arrival']['delay'])
-            self.trip_updates['stop_id'].append(
-                json_obj['trip_update']['stop_time_update']['stop_id'])
-            self.trip_updates['stop_sequence'].append(
-                json_obj['trip_update']['stop_time_update']['stop_sequence'])
+        # if json_obj['trip_update']['stop_time_update']['stop_id'] != self.last_updated_stop:
+        #     self.last_updated_stop = json_obj['trip_update']['stop_time_update']['stop_id']
+        #     self.trip_updates['arrival_time'].append(
+        #         json_obj['trip_update']['stop_time_update']['arrival']['time'])  # TODO: Fix the int time -> time.
+        #     self.trip_updates['delay'].append(
+        #         json_obj['trip_update']['stop_time_update']['arrival']['delay'])
+        #     self.trip_updates['stop_id'].append(
+        #         json_obj['trip_update']['stop_time_update']['stop_id'])
+        #     self.trip_updates['stop_sequence'].append(
+        #         json_obj['trip_update']['stop_time_update']['stop_sequence'])
+        current_updated_stop = int(json_obj['trip_update']['stop_time_update']['stop_sequence'])
+        stops_since_last_updated = current_updated_stop - self.last_updated_stop
+        if stops_since_last_updated > 0:
+            interp_locations = np.arange(1, stops_since_last_updated + 1)
+            self.trip_updates['arrival_time'] += list(np.interp(interp_locations,
+                                                                [0, stops_since_last_updated],
+                                                                [self.trip_updates['arrival_time'][-1],
+                                                                 json_obj['trip_update']['stop_time_update']['arrival'][
+                                                                     'time']]))
+            self.trip_updates['delay'] += list(np.interp(interp_locations,
+                                                         [0, stops_since_last_updated],
+                                                         [self.trip_updates['delay'][-1],
+                                                          json_obj['trip_update']['stop_time_update']['arrival'][
+                                                              'delay']]))
+            self.trip_updates['stop_id'] += self.ground_trip_stop_id[
+                                            self.last_updated_stop + 1:self.last_updated_stop + stops_since_last_updated + 1]
+            self.trip_updates['stop_sequence'] += list(np.asarray(interp_locations, dtype='float64') + self.last_updated_stop)
+            self.last_updated_stop = current_updated_stop
 
     def export(self, path_end):
         """ Exports itself to a json object and saves itself as the id and time.time() to ensure uniqueness.
