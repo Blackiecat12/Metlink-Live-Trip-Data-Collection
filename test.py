@@ -5,7 +5,7 @@ from Collector import DataCollector
 def main(sys_args):
     """ Runs the collector. """
     AUTH = get_api_params()
-    collector = DataCollector(AUTH, sys_args.save_path, sys_args.max_storage)
+    collector = DataCollector(AUTH, sys_args)
     collector.run_collection(sys_args.run_time)
 
 
@@ -29,6 +29,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("run_time", help="Length of time (seconds) to run the program", type=int)
     parser.add_argument("-sp", "--save_path", help="Path to save collected trips to", type=str, default="SavedTrips")
+    parser.add_argument("-rd", "--request_delay", help="Minimum delay in seconds between API requests", type=int,
+                        default=120)
     parser.add_argument("-ms", "--max_storage", help="Maximum bytes of data to store in the save path", type=int,
                         default=1e9)
     args = parser.parse_args()
