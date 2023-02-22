@@ -16,6 +16,7 @@ class DataCollector:
         """
         self.AUTH = AUTH
         self.records = {}
+        self.ground_trip_data = pd.read_csv("trip-stop-records.txt")
         self.batched_records = BatchTripRecord()
         self.max_batch_size = 100
         self.save_path = save_path
@@ -44,7 +45,8 @@ class DataCollector:
                 for entity in entities:
                     e_id = entity['trip_update']['trip']['trip_id']
                     if self.records.get(e_id) is None:
-                        self.records[e_id] = TripRecord(entity)
+                        self.records[e_id] = TripRecord(entity,
+                                                        self.ground_trip_data[self.ground_trip_data['trip_id'] == e_id])
                     else:
                         self.records[e_id].update(entity)
                     seen_ids.add(e_id)
@@ -139,7 +141,7 @@ class TripRecord:
     """ Storage for an ongoing trip. Once it is done it will be exported to json file.
     """
 
-    def __init__(self, json_obj: dict):
+    def __init__(self, json_obj: dict, ground_data):
         """ Pulls the necessary info from the json dict. Constants over the trip and time updated are stored
         separately.
         :param json_obj: input trip_update to create the trip """
@@ -154,6 +156,8 @@ class TripRecord:
                              'delay': [json_obj['trip_update']['stop_time_update']['arrival']['delay']],
                              'stop_id': [json_obj['trip_update']['stop_time_update']['stop_id']],
                              'stop_sequence': [json_obj['trip_update']['stop_time_update']['stop_sequence']]}
+        # Load the ground truth trip info
+        self.ground_trip_stop_id = list(ground_data["stop_id"])
 
     def update(self, json_obj: dict):
         """
