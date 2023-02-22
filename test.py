@@ -3,14 +3,15 @@ from Collector import DataCollector
 
 
 def main(sys_args):
+    """ Runs the collector. """
     AUTH = get_api_params()
-    # Testing
     collector = DataCollector(AUTH, sys_args.save_path, sys_args.max_storage)
     collector.run_collection(sys_args.run_time)
 
 
 def get_api_params():
-    """ Pulls the Endpoint and Authentication key from key.txt. These are laid out in consecutive lines.
+    """ Return Endpoint and Authentication key from key.txt.
+    These are laid out in consecutive lines.
     :return: {url: _, key: _}"""
     file = open("key.txt", 'r')
     ENDPOINT = file.readline()[:-1]  # Remove new line char

@@ -1,22 +1,24 @@
 import os
+import json
 import time
 import requests
-import json
+import numpy as np
+import pandas as pd
 
 
 class DataCollector:
     """ The overarching object for the data collector.
     """
 
-    def __init__(self, AUTH, file_path: str, max_storage: int):
+    def __init__(self, AUTH, save_path: str, max_storage: int):
         """ Passed the auth login for the API. Initialises the live records.
         :param AUTH: Authorisation dictionary
         """
         self.AUTH = AUTH
         self.records = {}
-        self.save_path = file_path
         self.batched_records = BatchTripRecord()
         self.max_batch_size = 100
+        self.save_path = save_path
         self.max_storage = max_storage
         self.request_count = 0
         self.complete = 0
@@ -135,7 +137,6 @@ class DataCollector:
 
 class TripRecord:
     """ Storage for an ongoing trip. Once it is done it will be exported to json file.
-        Note that the paths are a bit wordy TODO glom?
     """
 
     def __init__(self, json_obj: dict):
