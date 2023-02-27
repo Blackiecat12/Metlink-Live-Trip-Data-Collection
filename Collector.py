@@ -43,11 +43,6 @@ class DataCollector:
                 finished_trip_ids = self.process_trip_updates(entities)
                 self.process_finished_trips(finished_trip_ids)
 
-                # If reached batch size, export and reset
-                if len(self.batched_records) == self.max_batch_size:
-                    self.batched_records.export(self.save_path)
-                    self.batched_records = BatchTripRecord()
-
                 # Run the request_delay
                 while time.perf_counter() < loop_start + request_delay:
                     pass
@@ -59,11 +54,9 @@ class DataCollector:
                       f"\tRequests: {self.request_count}")
 
             # Save remaining partial trips
-            for tr_id in set(self.records.keys()):
-                assert (self.check_storage())
-                self.batched_records.update(self.records.pop(tr_id))
-                self.complete += 1
-            self.batched_records.export(self.save_path)
+            for trip_id in set(self.records.keys()):
+                self.update_batch_trips(self.records.pop(trip_id))
+            self.save_batch_record()
 
             # Print final message
             print(f"END:"
@@ -95,10 +88,8 @@ class DataCollector:
         """ Processes the removal and export of finished TripRecords.
         :param finished_ids: List of finished TripRecord ids
         """
-        for finished_id in set(self.records.keys()) - seen_ids:
-            assert (self.check_storage())
-            self.batched_records.update(self.records.pop(finished_ids))
-            self.complete += 1
+        for finished_id in set(self.records.keys()) - finished_ids:
+            self.update_batch_trips(self.records.pop(finished_id))
 
     def get_trip_updates(self):
         """ Collects and returns the list of current trip statuses from Metlink API
@@ -129,6 +120,20 @@ class DataCollector:
             print(f"Requesting {url} failed with code {r.status_code}")
             return None
         return r
+
+    def update_batch_trips(self, new_record):
+        """ Updates the batch with the new record, saves BatchTripRecord if max size reached.
+        :param new_record: Record to add to batch
+        """
+        if len(self.batched_records) >= self.max_batch_size:
+            self.save_batch_record()
+        self.batched_records.update(new_record)
+
+    def save_batch_record(self):
+        """ Saves the batched record if enough storage. """
+        assert (self.check_storage())
+        self.batched_records.export(self.save_path)
+        self.batched_records = BatchTripRecord()
 
     def calc_storage(self):
         """ Calculates the storage space taken up in the save_path.
