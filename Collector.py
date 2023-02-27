@@ -22,7 +22,7 @@ class DataCollector:
         self.save_path = save_path
         self.max_storage = max_storage
         self.request_count = 0
-        self.complete = 0
+        self.num_saved_trips = 0
 
     def run_collection(self, run_time: int):
         """ Runs the collection algorithm for the specified time (in seconds). Requests will be stopped for a minimum
@@ -50,7 +50,7 @@ class DataCollector:
                 print(f"CURRENTLY:" +
                       f"\tDuration {time.perf_counter() - start_time:.1f}s out of {run_time}s" +
                       f"\tOngoing trips: {len(self.records)}" +
-                      f"\tSaved trips: {self.complete}" +
+                      f"\tSaved trips: {self.num_saved_trips}" +
                       f"\tRequests: {self.request_count}")
 
             # Save remaining partial trips
@@ -60,11 +60,11 @@ class DataCollector:
 
             # Print final message
             print(f"END:"
-                  f"\tSaved {self.complete} trips from {self.request_count} requests over "
+                  f"\tSaved {self.num_saved_trips} trips from {self.request_count} requests over "
                   f"{time.perf_counter() - start_time:.1f} seconds")
 
         except AssertionError:
-            print(f"END: Max Storage reached with {self.complete} trips saved from {self.request_count} requests over "
+            print(f"END: Max Storage reached with {self.num_saved_trips} trips saved from {self.request_count} requests over "
                   f"{time.perf_counter() - start_time:.1f} seconds")
 
     def process_trip_updates(self, entities):
@@ -133,6 +133,7 @@ class DataCollector:
         """ Saves the batched record if enough storage. """
         assert (self.check_storage())
         self.batched_records.export(self.save_path)
+        self.num_saved_trips += len(self.batched_records)
         self.batched_records = BatchTripRecord()
 
     def calc_storage(self):
