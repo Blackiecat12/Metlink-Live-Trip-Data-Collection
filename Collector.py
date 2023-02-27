@@ -10,7 +10,7 @@ class DataCollector:
     """ The overarching object for the data collector.
     """
 
-    def __init__(self, AUTH, save_path: str, max_storage: int):
+    def __init__(self, AUTH, args):
         """ Passed the auth login for the API. Initialises the live records.
         :param AUTH: Authorisation dictionary
         """
@@ -19,8 +19,9 @@ class DataCollector:
         self.ground_trip_data = pd.read_csv("trip-stop-records.txt")
         self.batched_records = BatchTripRecord()
         self.max_batch_size = 100
-        self.save_path = save_path
-        self.max_storage = max_storage
+        self.save_path = args.save_path
+        self.max_storage = args.max_storage
+        self.request_delay = args.request_delay
         self.request_count = 0
         self.num_saved_trips = 0
 
@@ -29,7 +30,6 @@ class DataCollector:
         request_delay which _should_ be low enough to capture each stop.
         :param run_time: Length of time to run collection for in seconds
         """
-        request_delay = 20
         start_time = time.perf_counter()
         end_time = start_time + run_time
         # Run loop, catch assertion errors from check_storage
@@ -44,7 +44,7 @@ class DataCollector:
                 self.process_finished_trips(finished_trip_ids)
 
                 # Run the request_delay
-                while time.perf_counter() < loop_start + request_delay:
+                while time.perf_counter() < loop_start + self.request_delay:
                     pass
 
                 print(f"CURRENTLY:" +
@@ -241,13 +241,10 @@ class BatchTripRecord:
 
     def update(self, new_trip: TripRecord):
         """ Adds a new trip record to the batch.
-        Checks for already existing id, and adds time if so.
+        ID is the index of the trip
         :param new_trip: Trip record to add
         """
-        if self.trip_json.get(new_trip) is None:
-            self.trip_json[new_trip.id] = new_trip.as_json()
-        else:
-            self.trip_json[f"{new_trip.id}{int(time.time())}"] = new_trip
+        self.trip_json[len(self) + 1] = new_trip.as_json()
 
     def export(self, path_end):
         """ Exports itself to a json object and saves itself as time.time() to ensure uniqueness.
