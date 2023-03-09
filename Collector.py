@@ -23,7 +23,7 @@ class DataCollector:
         self.max_storage = args.max_storage
         self.request_delay = args.request_delay
         self.request_count = 0
-        self.complete = 0
+        self.num_saved_trips = 0
 
     def run_collection(self, run_time: int):
         """ Runs the collection algorithm for the specified time (in seconds). Requests will be stopped for a minimum
@@ -36,31 +36,12 @@ class DataCollector:
         try:
             while time.perf_counter() < end_time:
                 # Get the entities and initialise set for id storage
-                entities = self.get_trip_updates()
-                seen_ids = set()
-                self.request_count += 1
                 loop_start = time.perf_counter()
+                self.request_count += 1
 
-                # Process the trip_updates
-                for entity in entities:
-                    e_id = entity['trip_update']['trip']['trip_id']
-                    if self.records.get(e_id) is None:
-                        self.records[e_id] = TripRecord(entity,
-                                                        self.ground_trip_data[self.ground_trip_data['trip_id'] == e_id])
-                    else:
-                        self.records[e_id].update(entity)
-                    seen_ids.add(e_id)
-
-                # Remove unseen trips as complete
-                for tr_id in set(self.records.keys()) - seen_ids:
-                    assert (self.check_storage())
-                    self.batched_records.update(self.records.pop(tr_id))
-                    self.complete += 1
-
-                # If reached batch size, export and reset
-                if len(self.batched_records) == self.max_batch_size:
-                    self.batched_records.export(self.save_path)
-                    self.batched_records = BatchTripRecord()
+                entities = self.get_trip_updates()
+                finished_trip_ids = self.process_trip_updates(entities)
+                self.process_finished_trips(finished_trip_ids)
 
                 # Run the request_delay
                 while time.perf_counter() < loop_start + self.request_delay:
@@ -69,24 +50,46 @@ class DataCollector:
                 print(f"CURRENTLY:" +
                       f"\tDuration {time.perf_counter() - start_time:.1f}s out of {run_time}s" +
                       f"\tOngoing trips: {len(self.records)}" +
-                      f"\tSaved trips: {self.complete}" +
+                      f"\tSaved trips: {self.num_saved_trips}" +
                       f"\tRequests: {self.request_count}")
 
             # Save remaining partial trips
-            for tr_id in set(self.records.keys()):
-                assert (self.check_storage())
-                self.batched_records.update(self.records.pop(tr_id))
-                self.complete += 1
-            self.batched_records.export(self.save_path)
+            for trip_id in set(self.records.keys()):
+                self.update_batch_trips(self.records.pop(trip_id))
+            self.save_batch_record()
 
             # Print final message
             print(f"END:"
-                  f"\tSaved {self.complete} trips from {self.request_count} requests over "
+                  f"\tSaved {self.num_saved_trips} trips from {self.request_count} requests over "
                   f"{time.perf_counter() - start_time:.1f} seconds")
 
         except AssertionError:
-            print(f"END: Max Storage reached with {self.complete} trips saved from {self.request_count} requests over "
+            print(f"END: Max Storage reached with {self.num_saved_trips} trips saved from {self.request_count} requests over "
                   f"{time.perf_counter() - start_time:.1f} seconds")
+
+    def process_trip_updates(self, entities):
+        """ Process the data pulled from the API into TripRecords.
+        :param entities: The API data
+        :return finished_ids: List of trip ids that are no longer running
+        """
+        # Process the trip_updates
+        finished_ids = set()
+        for entity in entities:
+            entity_id = entity['trip_update']['trip']['trip_id']
+            if self.records.get(entity_id) is None:
+                self.records[entity_id] = TripRecord(entity,
+                                                     self.ground_trip_data[self.ground_trip_data['trip_id'] == entity_id])
+            else:
+                self.records[entity_id].update(entity)
+            finished_ids.add(entity_id)
+        return finished_ids
+
+    def process_finished_trips(self, finished_ids):
+        """ Processes the removal and export of finished TripRecords.
+        :param finished_ids: List of finished TripRecord ids
+        """
+        for finished_id in set(self.records.keys()) - finished_ids:
+            self.update_batch_trips(self.records.pop(finished_id))
 
     def get_trip_updates(self):
         """ Collects and returns the list of current trip statuses from Metlink API
@@ -117,6 +120,21 @@ class DataCollector:
             print(f"Requesting {url} failed with code {r.status_code}")
             return None
         return r
+
+    def update_batch_trips(self, new_record):
+        """ Updates the batch with the new record, saves BatchTripRecord if max size reached.
+        :param new_record: Record to add to batch
+        """
+        if len(self.batched_records) >= self.max_batch_size:
+            self.save_batch_record()
+        self.batched_records.update(new_record)
+
+    def save_batch_record(self):
+        """ Saves the batched record if enough storage. """
+        assert (self.check_storage())
+        self.batched_records.export(self.save_path)
+        self.num_saved_trips += len(self.batched_records)
+        self.batched_records = BatchTripRecord()
 
     def calc_storage(self):
         """ Calculates the storage space taken up in the save_path.
