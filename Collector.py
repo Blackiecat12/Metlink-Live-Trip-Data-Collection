@@ -235,7 +235,7 @@ class BatchTripRecord:
         """
         if len(self) == 0:
             return
-        file_path = f"{os.getcwd()}\\{path_end}\\BatchedRecord-{int(time.time())}.json"
+        file_path = os.path.join(os.getcwd(), path_end, f"BatchedRecord-{int(time.time())}.json")
         json_object = json.dumps(self.trip_json, indent=4)
         with open(file_path, "w") as outfile:
             outfile.write(json_object)
