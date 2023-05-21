@@ -6,7 +6,7 @@ def main(sys_args):
     """ Runs the collector. """
     AUTH = get_api_params()
     collector = DataCollector(AUTH, sys_args)
-    collector.run_collection(sys_args.run_time)
+    collector.run_collection(sys_args.run_time, sys_args.run_time_unit)
 
 
 def get_api_params():
@@ -27,7 +27,10 @@ if __name__ == "__main__":
         :param max_storage: Max amount of space to use in save_path
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("run_time", help="Length of time (seconds) to run the program", type=int)
+    parser.add_argument("run_time", help="Length of time to run the program (Default in seconds)", type=int)
+    parser.add_argument("-rtu", "--run_time_unit", help="Unit to use for run time argument. Seconds [s], Minutes [m], "
+                                                        "Hours [h], Days [d]", type=str, default='s',
+                        choices=['s', 'm', 'h', 'd'])
     parser.add_argument("-sp", "--save_path", help="Path to save collected trips to", type=str, default="SavedTrips")
     parser.add_argument("-rd", "--request_delay", help="Minimum delay in seconds between API requests", type=int,
                         default=120)

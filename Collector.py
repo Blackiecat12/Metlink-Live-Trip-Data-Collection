@@ -25,13 +25,16 @@ class DataCollector:
         self.request_count = 0
         self.num_saved_trips = 0
 
-    def run_collection(self, run_time: int):
+    def run_collection(self, run_time: int, run_time_unit: str):
         """ Runs the collection algorithm for the specified time (in seconds). Requests will be stopped for a minimum
         request_delay which _should_ be low enough to capture each stop.
-        :param run_time: Length of time to run collection for in seconds
+        :param run_time: Length of unitless time to run collection
+        :param run_time_unit: The unit to use for input time
         """
+        time_unit_to_seconds = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400}
         start_time = time.perf_counter()
-        end_time = start_time + run_time
+        run_time_seconds = run_time * time_unit_to_seconds[run_time_unit]
+        end_time = start_time + run_time_seconds
         # Run loop, catch assertion errors from check_storage
         try:
             while time.perf_counter() < end_time:
@@ -44,11 +47,10 @@ class DataCollector:
                 self.process_finished_trips(finished_trip_ids)
 
                 # Run the request_delay
-                while time.perf_counter() < loop_start + self.request_delay:
-                    pass
+                time.sleep(max((loop_start + self.request_delay) - time.perf_counter(), 0))
 
                 print(f"CURRENTLY:" +
-                      f"\tDuration {time.perf_counter() - start_time:.1f}s out of {run_time}s" +
+                      f"\tDuration {time.perf_counter() - start_time:.1f}s out of {run_time_seconds}s" +
                       f"\tOngoing trips: {len(self.records)}" +
                       f"\tSaved trips: {self.num_saved_trips}" +
                       f"\tRequests: {self.request_count}")
